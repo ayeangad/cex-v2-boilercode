@@ -4,7 +4,6 @@ import { prisma } from "../db.js";
 import { authSchema } from "../types/auth-schema.js";
 import { createToken } from "../utils/auth.js";
 import { sendValidationError } from "../utils/validation.js";
-import { jwt } from "zod";
 
 export async function signup(req: Request, res: Response): Promise<void> {
   const parsedBody = authSchema.safeParse(req.body);
@@ -29,8 +28,9 @@ export async function signup(req: Request, res: Response): Promise<void> {
       userId: user.id,
       username: user.username,
     });
-  } catch {
-    res.status(409).json({ error: "username already exists" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Server crash!" });
   }
 }
 
