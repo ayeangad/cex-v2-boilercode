@@ -20,7 +20,7 @@ function getOrderbook(symbol: string) {
 function settleTrade(buyerId: string, sellerId: string, qty: number, price: number, symbol: string): void {
   const totalCost = qty * price;
   getBalance(buyerId, "INR").locked -= totalCost
-  getBalance(buyerId, "INR").available += totalCost
+  getBalance(sellerId, "INR").available += totalCost
 
   getBalance(sellerId, symbol).locked -= qty;
   getBalance(buyerId, symbol).available += qty;
@@ -86,21 +86,16 @@ export function createOrder(input: CreateOrderInput) {
         sellOrderId: side === "sell" ? existingOrder.orderId : order.orderId,
         createdAt: Date.now()
       }
-    }
+      order.fills.push(fills);
 
+      const globalExisting = ORDERS.get(existingOrder.orderId)!;
+      globalExisting.filledQty += fillAmount;
+      globalExisting.status = existingOrder.qty === 0 ? "filled" : "partially_filled";
+      globalExisting.fills.push(fills);
 
-
-    await prisma.order.update({
-      where: { id: existingOrder.orderId },
-      data: {
-        filledQty: { increment: fillAmount },
-        status: existingOrder.qty === 0 ? "filled" : "PARTIAL"
-      }
-    })
-
-    if (side === "buy") {
-      settleTrade(userId, existingOrder.userId, fillAmount, existingOrder.price, symbol)
-      else {
+      if (side === "buy") {
+        settleTrade(userId, existingOrder.userId, fillAmount, existingOrder.price, symbol)
+      } else {
         settleTrade(existingOrder.userId, userId, fillAmount, existingOrder.price, symbol)
       };
 
@@ -108,35 +103,34 @@ export function createOrder(input: CreateOrderInput) {
         oppositeSide.splice(i, 1)
         i--
       }
-
-
-
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          filledQty: qty - remainingQty,
-          status: remainingQty === 0 ? "filled" : (remainingQty === qty ? "open" : "partially_filled")
-        }
-    
-    
-    remainingQty > 0) {
-    nst mySide = side === "buy" ? ORDERBOOK[symbol].bids : ORDERBOOK[symbol].asks
-
-        mySide.push({
-          orderId: order.id,
-          userId,
-          price,
-          qty: remainingQty,
-          filledQty: qty - remainingQty
-        });
-
-
-        return {
-          message: "Order Processed!",
-          orderId: order.id,
-          filled: qty - remainingQty,
-          remaining: remainingQty
-        }
-      }
     }
   }
+
+  order.filledQty = qty - remainingQty;
+  order.status = remainingQty === 0 ? "filled" : (remainingQty === qty ? "open" : "partially_filled")
+  ORDERS.set(order.orderId, order);
+
+  if (remainingQty > 0) {
+    const mySide = side === "buy" ? books.bids : books.asks
+
+    mySide.push({
+      orderId: order.orderId,
+      userId,
+      price: price!,
+      side,
+      type: "limit",
+      symbol,
+      createdAt: Date.now(),
+      qty: remainingQty,
+      filledQty: qty - remainingQty,
+      status: order.status as OrderStatus
+    });
+  }
+
+  return {
+    message: "Order Processed!",
+    orderId: order.orderId,
+    filled: qty - remainingQty,
+    remaining: remainingQty
+  }
+}
