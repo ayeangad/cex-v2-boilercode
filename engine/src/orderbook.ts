@@ -1,4 +1,4 @@
-import type { CancelOrder, CreateOrderInput, DepthLevel, OrderRecord, OrderStatus, RestingOrder, Fill, DepthResponse } from "./store/exchange-store";
+import type { Balance, CancelOrder, CreateOrderInput, DepthLevel, OrderRecord, OrderStatus, RestingOrder, Fill, DepthResponse } from "./store/exchange-store";
 import { BALANCES, ORDERS, ORDERBOOKS } from "./store/exchange-store";
 
 
@@ -138,24 +138,6 @@ export function createOrder(input: CreateOrderInput) {
   }
 }
 
-export function cancelOrder(input: CancelOrder) {
-  const { orderId, userId } = input
-  const order = ORDERS.get(orderId)
-
-  if (!order) throw new Error("Order not found");
-  const orderbook = ORDERBOOKS[order.symbol]
-
-  if (order.orderId !== userId) throw new Error("Unauthorized");
-  if (order.status === "filled") throw new Error("Order already filled");
-  if (!orderbook) throw new Error("orderbook not found")
-
-  const side = order.side === "buy" ? orderbook.bids : orderbook.asks
-  const index = side.findIndex(o => o.orderId === orderId);
-
-  if (index !== -1) side.splice(index, 1)
-  order.status = "cancelled"
-}
-
 export function getDepth(symbol: string): DepthResponse {
   const book = ORDERBOOKS[symbol];
   if (!book) {
@@ -180,12 +162,39 @@ export function getDepth(symbol: string): DepthResponse {
   const bids = aggregate(book.bids).sort((a, b) => b.price - a.price);
   const asks = aggregate(book.asks).sort((a, b) => a.price - b.price);
 
-
-
   return {
     symbol,
     bids,
     asks
   }
 }
+
+export function getUserBalance(userId: string): Record<string, Balance> {
+  return BALANCES[userId] || {};
+}
+
+export function getOrder(orderId: string) {
+  const order = ORDERS.get(orderId)
+  if (!order) throw new Error("Order not found");
+  return order;
+}
+
+export function cancelOrder(input: CancelOrder) {
+  const { orderId, userId } = input
+  const order = ORDERS.get(orderId)
+
+  if (!order) throw new Error("Order not found");
+  const orderbook = ORDERBOOKS[order.symbol]
+
+  if (order.orderId !== userId) throw new Error("Unauthorized");
+  if (order.status === "filled") throw new Error("Order already filled");
+  if (!orderbook) throw new Error("orderbook not found")
+
+  const side = order.side === "buy" ? orderbook.bids : orderbook.asks
+  const index = side.findIndex(o => o.orderId === orderId);
+
+  if (index !== -1) side.splice(index, 1)
+  order.status = "cancelled"
+}
+
 
