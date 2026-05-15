@@ -1,11 +1,11 @@
-import type { Balance, CancelOrder, CreateOrderInput, DepthLevel, OrderRecord, OrderStatus, RestingOrder, Fill, DepthResponse } from "./store/exchange-store";
+import type { Balance, CancelOrder, CreateOrderInput, OrderRecord, OrderStatus, RestingOrder, Fill, DepthResponse } from "./store/exchange-store";
 import { BALANCES, ORDERS, ORDERBOOKS } from "./store/exchange-store";
 
 
 function getBalance(userId: string, symbol: string) {
   if (!BALANCES[userId]) BALANCES[userId] = {};
   if (!BALANCES[userId][symbol]) {
-    BALANCES[userId][symbol] = { available: 0, locked: 0 };
+    BALANCES[userId][symbol] = { available: 10000000, locked: 0 };
   }
   return BALANCES[userId][symbol];
 }
@@ -186,7 +186,7 @@ export function cancelOrder(input: CancelOrder) {
   if (!order) throw new Error("Order not found");
   const orderbook = ORDERBOOKS[order.symbol]
 
-  if (order.orderId !== userId) throw new Error("Unauthorized");
+  if (order.userId !== userId) throw new Error("Unauthorized");
   if (order.status === "filled") throw new Error("Order already filled");
   if (!orderbook) throw new Error("orderbook not found")
 
@@ -195,6 +195,8 @@ export function cancelOrder(input: CancelOrder) {
 
   if (index !== -1) side.splice(index, 1)
   order.status = "cancelled"
+
+  return { message: "Order cancelled!" };
 }
 
 
