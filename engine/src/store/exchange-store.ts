@@ -45,8 +45,13 @@ export interface Fill {
 }
 
 export interface OrderBook {
-  bids: Map<number, RestingOrder[]>;
-  asks: Map<number, RestingOrder[]>;
+  bids: RestingOrder[];
+  asks: RestingOrder[];
+}
+
+export interface CancelOrder {
+  userId: string;
+  orderId: string;
 }
 
 export interface CreateOrderInput {
@@ -69,7 +74,7 @@ export interface DepthResponse {
   asks: DepthLevel[];
 }
 
-export const BALANCES = new Map<string, Record<string, Balance>>();
-export const ORDERBOOKS = new Map<string, OrderBook>();
+export const BALANCES: Record<string, Record<string, Balance>> = {};
+export const ORDERBOOKS: Record<string, OrderBook> = {};
 export const ORDERS = new Map<string, OrderRecord>();
 export const FILLS: Fill[] = [];
