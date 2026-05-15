@@ -1,4 +1,4 @@
-import type { CreateOrderInput, OrderBook, OrderRecord, OrderStatus, RestingOrder, Fill } from "./store/exchange-store";
+import type { CancelOrder, CreateOrderInput, DepthLevel, OrderRecord, OrderStatus, RestingOrder, Fill, DepthResponse } from "./store/exchange-store";
 import { BALANCES, ORDERS, ORDERBOOKS } from "./store/exchange-store";
 
 
@@ -130,7 +130,60 @@ export function createOrder(input: CreateOrderInput) {
   return {
     message: "Order Processed!",
     orderId: order.orderId,
+    status: order.status,
+    fills: order.fills,
+    averagePrice: price ? 0,
     filled: qty - remainingQty,
     remaining: remainingQty
   }
 }
+
+export function cancelOrder(input: CancelOrder) {
+  const { orderId, userId } = input
+  const order = ORDERS.get(orderId)
+  if (!order) throw new Error("Order not found");
+  if (order.orderId !== userId) throw new Error("Unauthorized");
+  if (order.status === "filled") throw new Error("Order already filled");
+
+  const orderbook = ORDERBOOKS[order.symbol]
+  if (!orderbook) throw new Error("orderbook not found")
+  const side = order.side === "buy" ? orderbook.bids : orderbook.asks
+  const index = side.findIndex(o => o.orderId === orderId);
+  if (index !== -1) side.splice(index, 1)
+  order.status = "cancelled"
+}
+
+
+
+// export function getDepth(symbol: string): DepthResponse {
+//   const book = ORDERBOOKS[symbol];
+//   if (!book) {
+//     return {
+//       symbol: symbol,
+//       bids: [],
+//       asks: []
+//     }
+//   }
+//
+//   const accumulator = (orders: RestingOrder[]) => {
+//     const counts: Record<number, number> = {};
+//     orders.forEach((order) => {
+//
+//     }
+//
+//     book.bids.forEach(order => {
+//       if (accumulator[order.price]) {
+//
+//       }
+//     });
+//
+//   }
+//
+//
+//   return {
+//     symbol,
+//     bids,
+//     asks
+//   }
+// }
+
