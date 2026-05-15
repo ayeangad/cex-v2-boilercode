@@ -132,7 +132,7 @@ export function createOrder(input: CreateOrderInput) {
     orderId: order.orderId,
     status: order.status,
     fills: order.fills,
-    averagePrice: price ? 0,
+    averagePrice: price ?? 0,
     filled: qty - remainingQty,
     remaining: remainingQty
   }
@@ -141,49 +141,51 @@ export function createOrder(input: CreateOrderInput) {
 export function cancelOrder(input: CancelOrder) {
   const { orderId, userId } = input
   const order = ORDERS.get(orderId)
+
   if (!order) throw new Error("Order not found");
+  const orderbook = ORDERBOOKS[order.symbol]
+
   if (order.orderId !== userId) throw new Error("Unauthorized");
   if (order.status === "filled") throw new Error("Order already filled");
-
-  const orderbook = ORDERBOOKS[order.symbol]
   if (!orderbook) throw new Error("orderbook not found")
+
   const side = order.side === "buy" ? orderbook.bids : orderbook.asks
   const index = side.findIndex(o => o.orderId === orderId);
+
   if (index !== -1) side.splice(index, 1)
   order.status = "cancelled"
 }
 
+export function getDepth(symbol: string): DepthResponse {
+  const book = ORDERBOOKS[symbol];
+  if (!book) {
+    return {
+      symbol: symbol,
+      bids: [],
+      asks: []
+    }
+  }
+
+  const aggregate = (orders: RestingOrder[]) => {
+    const counts: Record<number, number> = {};
+    orders.forEach(order => {
+      counts[order.price] = (counts[order.price] || 0) + order.qty;
+    })
+    return Object.entries(counts).map(([price, qty]) => ({
+      price: Number(price),
+      qty
+    }))
+  }
+
+  const bids = aggregate(book.bids).sort((a, b) => b.price - a.price);
+  const asks = aggregate(book.asks).sort((a, b) => a.price - b.price);
 
 
-// export function getDepth(symbol: string): DepthResponse {
-//   const book = ORDERBOOKS[symbol];
-//   if (!book) {
-//     return {
-//       symbol: symbol,
-//       bids: [],
-//       asks: []
-//     }
-//   }
-//
-//   const accumulator = (orders: RestingOrder[]) => {
-//     const counts: Record<number, number> = {};
-//     orders.forEach((order) => {
-//
-//     }
-//
-//     book.bids.forEach(order => {
-//       if (accumulator[order.price]) {
-//
-//       }
-//     });
-//
-//   }
-//
-//
-//   return {
-//     symbol,
-//     bids,
-//     asks
-//   }
-// }
+
+  return {
+    symbol,
+    bids,
+    asks
+  }
+}
 
