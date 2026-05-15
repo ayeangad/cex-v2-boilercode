@@ -5,7 +5,7 @@ import { BALANCES, ORDERS, ORDERBOOKS } from "./store/exchange-store";
 function getBalance(userId: string, symbol: string) {
   if (!BALANCES[userId]) BALANCES[userId] = {};
   if (!BALANCES[userId][symbol]) {
-    BALANCES[userId][symbol] = { available: 10000000, locked: 0 };
+    BALANCES[userId][symbol] = { available: 0, locked: 0 };
   }
   return BALANCES[userId][symbol];
 }
